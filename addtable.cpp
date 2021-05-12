@@ -66,7 +66,7 @@ int main()
     mnl_nlmsg_batch_next(batch);
 
     table_seq = seq;
-    nlh = make_table_header(reinterpret_cast<char*>(mnl_nlmsg_batch_current(batch)), NFT_MSG_DELTABLE, NFPROTO_IPV4, NLM_F_ACK, seq++);
+    nlh = make_table_header(reinterpret_cast<char*>(mnl_nlmsg_batch_current(batch)), NFT_MSG_NEWTABLE, NFPROTO_IPV4, NLM_F_ACK | NLM_F_CREATE, seq++);
     make_table_payload(nlh, table_name, htonl(0));
 
     mnl_nlmsg_batch_next(batch);
