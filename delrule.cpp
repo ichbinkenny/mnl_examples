@@ -71,8 +71,8 @@ int main()
   mnl_nlmsg_batch_next(batch);
 
   rule_seq = seq;
-  nlmsghdr* nlh = make_header(reinterpret_cast<char*>(mnl_nlmsg_batch_current(batch)), NFT_MSG_NEWRULE, 
-      NFPROTO_IPV4, NLM_F_CREATE | NLM_F_ACK, seq++);
+  nlmsghdr* nlh = make_header(reinterpret_cast<char*>(mnl_nlmsg_batch_current(batch)), NFT_MSG_DELRULE, 
+      NFPROTO_IPV4, NLM_F_ACK, seq++);
   mnl_attr_put_strz(nlh, 1, "filter");
   mnl_attr_put_strz(nlh, 2, "alpaca");
   mnl_attr_put_u32(nlh, 0, NFPROTO_IPV4); //family

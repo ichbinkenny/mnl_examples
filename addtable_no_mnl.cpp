@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <string.h>
 
+
+
 int main()
 {
   int sockfd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_NETFILTER);
@@ -28,7 +30,7 @@ int main()
   char buf[8192];
   nlmsghdr* nlh = reinterpret_cast<nlmsghdr*>(buf);
   nlh->nlmsg_len = NLMSG_ALIGN(sizeof(nlmsghdr));
-  nlh->nlmsg_type = NFT_MSG_GETTABLE;
+  nlh->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_GETTABLE;
   nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
 
   nfgenmsg* gen = reinterpret_cast<nfgenmsg*>(nlh + nlh->nlmsg_len);
@@ -50,6 +52,29 @@ int main()
   socklen_t len = sizeof(sockaddr_nl);
   getsockname(sockfd, reinterpret_cast<sockaddr*>(&addr), &len);
   int portno = addr.nl_pid;
+
+  std::cout << "Running on port " << portno << std::endl;
+
+  iovec iov = {
+    .iov_base = buf,
+    .iov_len = sizeof(buf),
+  };
+
+  msghdr msg = {
+    .msg_name = &out, 
+    .msg_namelen = sizeof(sockaddr_nl),
+    .msg_iov = &iov,
+    .msg_iovlen = 1,
+    .msg_control = nullptr,
+    .msg_controllen = 0,
+    .msg_flags = 0,
+  };
+
+  resp = recvmsg(sockfd, &msg, 0);
+  if(resp < 0)
+  {
+    std::cout << "Failed to recv: " << strerror(errno) << std::endl;
+  }
 
   std::cout << "Port number: " << portno << std::endl;
 
