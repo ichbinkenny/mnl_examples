@@ -5,7 +5,6 @@
 #include <linux/netfilter.h>
 #include <linux/netfilter/nfnetlink.h>
 #include <linux/netfilter/nf_tables.h>
-#include <libnftnl/rule.h>
 #include <iostream>
 #include <unistd.h>
 

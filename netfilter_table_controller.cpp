@@ -98,12 +98,13 @@ void netfilter_table_controller::get_tables(void* buffer)
         }
         else
         {
-            std::cout << "Recv initial data" << std::endl;
+            std::cout << "Recv initial data: " << resp << std::endl;
             while (resp > 0)
             {
                 resp = get_table_data(static_cast<char*>(buffer), resp, seq, addr.nl_pid, nullptr);
                 if (resp <= 0)
                 {
+                    std::cout << "Breaking here" << std::endl;
                     break;
                 }
                 resp = recv(buffer, sizeof(buffer));
@@ -173,5 +174,14 @@ data_status netfilter_table_controller::get_table_data(char* buffer, size_t len,
 
 bool netfilter_table_controller::nlmsg_valid(nlmsghdr* nlh, int len)
 {
-    return len >= static_cast<int>(sizeof(nlmsghdr)) && nlh->nlmsg_len >= sizeof(nlmsghdr) && nlh->nlmsg_len <= len;
+    bool match = len >= static_cast<int>(sizeof(nlmsghdr)) && nlh->nlmsg_len >= sizeof(nlmsghdr) && nlh->nlmsg_len <= len;
+    if ( !match ) 
+    {
+        std::cout << "Match error. " << std::endl;
+        if ( len < sizeof(nlmsghdr))
+        {
+            std::cout << "Len of " << len << " too short for nlmsghdr(" << sizeof(nlmsghdr)  << std::endl;
+        }
+    }
+    return match;
 }
