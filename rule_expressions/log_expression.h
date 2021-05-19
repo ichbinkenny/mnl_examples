@@ -8,10 +8,10 @@ class log_expression : public rule_expression
 	public:
 		log_expression();
 		~log_expression();
-		void build(nlmsghdr* p_nlh);
-		void parse(nlattr* p_attr);
+		void build(nlmsghdr* p_nlh) override;
+		void parse(nlattr* p_attr) override;
 		bool same_as(const log_expression& other);
-		const char* get_name();	
+		const char* get_name() override;	
 	private:
 		uint32_t snap_length;
 		uint16_t group_id;

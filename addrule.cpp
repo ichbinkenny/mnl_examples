@@ -8,6 +8,9 @@
 #include <iostream>
 #include <unistd.h>
 #include "iptable_rule.h"
+#include "rule_expressions/counter_expression.h"
+#include "rule_expressions/log_expression.h"
+#include "rule_expressions/meta_expression.h"
 #include <cstring>
 
 const int expr_name = 0;
@@ -180,8 +183,12 @@ int main()
   // r.expression_list.push_back(expr);
   //create_rule_payload(nlh, &r);
   std::vector<uint8_t> data;
-  rule.add_expression("log", 0, data);
-  rule.add_expression("counter", 0, data);
+  counter_expression cexpr;
+  log_expression lexpr;
+  meta_expression mexpr;
+  rule.add_expression(mexpr);
+  rule.add_expression(cexpr);
+  rule.add_expression(lexpr);
   rule.build_nlmsg_payload(nlh);
 
   mnl_nlmsg_batch_next(batch);

@@ -9,6 +9,7 @@
 #include <linux/netfilter/nf_tables.h>
 #include <cstdint>
 #include <string>
+#include <memory>
 
 enum expression_payload_flags
 {
@@ -59,7 +60,7 @@ public:
 	void test();
 	char* get_message_payload_ending(nlmsghdr* nlh);
 	void build_nlmsg_payload(nlmsghdr* nlh);
-	void add_expression(rule_expression expr);
+	void add_expression(rule_expression& expr);
 
 private:
 
@@ -82,10 +83,8 @@ private:
 
 	nlattr* begin_nest(nlmsghdr* nlh, uint16_t flag);
 	void end_nest(nlmsghdr* nlh, nlattr* nest);
-	void put(nlmsghdr* nlh, uint16_t type, size_t length, const void* data);
-	char* get_attribute_payload(nlattr* attr);
-	void package_expression(nlmsghdr* nlh, rule_expression re);
-	void create_expression_payload(nlmsghdr* nlh, rule_expression expr);
+	void package_expression(nlmsghdr* nlh, rule_expression& re);
+	void create_expression_payload(nlmsghdr* nlh, rule_expression& expr);
 };
 
 

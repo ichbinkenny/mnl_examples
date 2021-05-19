@@ -1,4 +1,5 @@
 #include "iptable_rule.h"
+#include "iptable_helpers.h"
 #include <libmnl/libmnl.h>
 #include <iostream>
 #include <unistd.h>
@@ -46,7 +47,7 @@ void iptable_rule::set_data(uint16_t attribute, void* data, uint32_t data_length
 	}
 }
 
-void iptable_rule::add_expression(rule_expression expr)
+void iptable_rule::add_expression(rule_expression& expr)
 { 
   this->expression_list.push_back(expr);
 }
@@ -68,29 +69,24 @@ char* iptable_rule::get_message_payload_ending(nlmsghdr* nlh)
 	return reinterpret_cast<char*>(reinterpret_cast<char*>(nlh) + NLMSG_ALIGN(nlh->nlmsg_len));
 }
 
-char* iptable_rule::get_attribute_payload(nlattr* attr)
-{
-  return reinterpret_cast<char*>(reinterpret_cast<char*>(attr) + NLMSG_ALIGN(sizeof(nlattr)));
-}
-
 void iptable_rule::build_nlmsg_payload(nlmsghdr* nlh)
 {
 	nlattr* nest, *nested_nest;
 
   if (this->family != 0)
   {
-    put(nlh, NFTA_RULE_UNSPEC, sizeof(uint32_t), &this->family);
+    iptable_helpers::put(nlh, NFTA_RULE_UNSPEC, sizeof(uint32_t), &this->family);
     //mnl_attr_put_u32(nlh, NFTA_RULE_UNSPEC, this->family);
 	}
   if (!this->table.empty())
   {
-    put(nlh, NFTA_RULE_TABLE, strlen(this->table.c_str()) + 1, this->table.c_str()); // +1 is to include null terminator
+    iptable_helpers::put(nlh, NFTA_RULE_TABLE, strlen(this->table.c_str()) + 1, this->table.c_str()); // +1 is to include null terminator
     //mnl_attr_put_strz(nlh, NFTA_RULE_TABLE, this->table.c_str());
 	}
   if (!this->chain.empty())
   {
     //mnl_attr_put_strz(nlh, NFTA_RULE_CHAIN, this->chain.c_str());
-    put(nlh, NFTA_RULE_CHAIN, strlen(this->chain.c_str()) + 1, this->chain.c_str());
+    iptable_helpers::put(nlh, NFTA_RULE_CHAIN, strlen(this->chain.c_str()) + 1, this->chain.c_str());
 	}
  //  if (!this->position != 0)
  //  {
@@ -106,17 +102,17 @@ void iptable_rule::build_nlmsg_payload(nlmsghdr* nlh)
     for( uint8_t i = 0; i <  this->expression_list.size(); ++i)
     {
       nested_nest = begin_nest(nlh, NFTA_LIST_ELEM);
-      expression_list[i].build(nlh);
+      iptable_helpers::put(nlh, NFTA_EXPR_NAME, strlen(expression_list[i].get_name()), expression_list[i].get_name());
       end_nest(nlh, nested_nest);
     }
     end_nest(nlh, nest);
   }
 }
 
-void iptable_rule::package_expression(nlmsghdr* nlh, rule_expression expr)
+void iptable_rule::package_expression(nlmsghdr* nlh, rule_expression& expr)
 {
   const char* name = expr.get_name();
-  put(nlh, NFTA_EXPR_NAME, strlen(name), name);
+  iptable_helpers::put(nlh, NFTA_EXPR_NAME, strlen(name), name);
 
   // if (strcmp(expr.name, "bitwise") == 0)
   // {
@@ -135,22 +131,4 @@ nlattr* iptable_rule::begin_nest(nlmsghdr* nlh, uint16_t flag)
 void iptable_rule::end_nest(nlmsghdr* nlh, nlattr* nest)
 {
 	nest->nla_len = get_message_payload_ending(nlh) - reinterpret_cast<char*>(nest);
-}
-
-void iptable_rule::put(nlmsghdr* nlh, uint16_t type, size_t length, const void* data)
-{
-	nlattr* attr = reinterpret_cast<nlattr*>(get_message_payload_ending(nlh));
-	uint16_t payload_size = NLMSG_ALIGN(sizeof(nlattr)) + length;
-  attr->nla_type = type;
-  attr->nla_len = payload_size;
-
-  // copy data into header
-  memcpy(get_attribute_payload(attr),  data, length);
-  // align data
-  int align = NLMSG_ALIGN(length) - length;
-  if (align > 0)
-  {
-    (void) memset(get_attribute_payload(attr) + length, 0, align);
-  }
-  nlh->nlmsg_len += NLMSG_ALIGN(payload_size);
 }
