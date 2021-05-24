@@ -1,5 +1,6 @@
 #include <vector>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <libmnl/libmnl.h>
 #include <linux/netlink.h>
 #include <linux/netfilter.h>
@@ -11,6 +12,8 @@
 #include "rule_expressions/counter_expression.h"
 #include "rule_expressions/log_expression.h"
 #include "rule_expressions/meta_expression.h"
+#include "rule_expressions/payload_expression.h"
+#include "rule_expressions/comparison_expression.h"
 #include <cstring>
 
 const int expr_name = 0;
@@ -186,7 +189,13 @@ int main()
   counter_expression cexpr;
   log_expression lexpr;
   meta_expression mexpr;
-  rule.add_expression(mexpr);
+  payload_expression payload(NFT_PAYLOAD_TRANSPORT_HEADER, NFT_REG_1, offsetof(tcphdr, dest), sizeof(uint8_t));
+  payload.add_flags((1 << NFTA_PAYLOAD_DREG) | (1 << NFTA_PAYLOAD_BASE) | (1 << NFTA_PAYLOAD_OFFSET) | (1 << NFTA_PAYLOAD_LEN));
+  uint16_t port = htons(23);
+  comparison_expression cmp(NFT_REG_1, NFT_CMP_EQ, reinterpret_cast<const void*>(&port), sizeof(uint8_t));
+  //rule.add_expression(mexpr);
+  //rule.add_expression(payload);
+  //rule.add_expression(cmp);
   rule.add_expression(cexpr);
   rule.add_expression(lexpr);
   rule.build_nlmsg_payload(nlh);

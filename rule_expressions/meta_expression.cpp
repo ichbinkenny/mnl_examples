@@ -7,6 +7,7 @@ meta_expression::meta_expression()
 {
 	this->name = "meta";
 	this->meta_key = NFT_META_IIFNAME;
+	
 	this->source = NFT_REG_1;
 	this->dest = NFT_REG_2;
 	this->flags |= (1<<NFTA_META_KEY) | (1<<NFTA_META_DREG) | (1<<NFTA_META_SREG);

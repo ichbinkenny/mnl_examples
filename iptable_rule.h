@@ -39,17 +39,17 @@ enum layer_bases
 	TransportLayer,
 };
 
-struct payload_expression 
-{
-	netfilter_regs source;
-	netfilter_regs dest;
-	layer_bases layer;
-	uint32_t offset;
-	uint32_t length;
-	uint32_t sum_type;
-	uint32_t sum_offset;
-	uint32_t sum_flags;
-};
+// struct payload_expression 
+// {
+// 	netfilter_regs source;
+// 	netfilter_regs dest;
+// 	layer_bases layer;
+// 	uint32_t offset;
+// 	uint32_t length;
+// 	uint32_t sum_type;
+// 	uint32_t sum_offset;
+// 	uint32_t sum_flags;
+// };
 
 class iptable_rule 
 {

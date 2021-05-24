@@ -71,7 +71,7 @@ char* iptable_rule::get_message_payload_ending(nlmsghdr* nlh)
 
 void iptable_rule::build_nlmsg_payload(nlmsghdr* nlh)
 {
-	nlattr* nest, *nested_nest;
+	nlattr* nest, *nested_nest, *double_nested_nest;
 
   if (this->family != 0)
   {
@@ -103,6 +103,10 @@ void iptable_rule::build_nlmsg_payload(nlmsghdr* nlh)
     {
       nested_nest = begin_nest(nlh, NFTA_LIST_ELEM);
       iptable_helpers::put(nlh, NFTA_EXPR_NAME, strlen(expression_list[i].get_name()), expression_list[i].get_name());
+      double_nested_nest = begin_nest(nlh, NFTA_EXPR_DATA);
+      expression_list[i].build(nlh);
+      end_nest(nlh, double_nested_nest);
+      expression_list[i].build(nlh);
       end_nest(nlh, nested_nest);
     }
     end_nest(nlh, nest);
