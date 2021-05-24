@@ -2,6 +2,7 @@
 #include <arpa/inet.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
+#include <netinet/if_ether.h>
 #include <libmnl/libmnl.h>
 #include <linux/netlink.h>
 #include <linux/netfilter.h>
@@ -180,15 +181,26 @@ int main()
   // uint32_t proto = IPPROTO_ICMP;
   // comparison_expression cmp(NFT_REG_1, NFT_CMP_EQ, &proto, sizeof(uint8_t));
   // rule.add_expression(&cmp);
-  payload_expression icmp_payload(NFT_PAYLOAD_NETWORK_HEADER, NFT_REG_2, offsetof(iphdr, protocol), sizeof(uint8_t));
-  uint32_t proto = IPPROTO_ICMP;
-  comparison_expression icmp_cmp(NFT_REG_2, NFT_CMP_EQ, &proto, sizeof(uint8_t));
-  reject_expression reject(NFT_REJECT_ICMP_UNREACH, 0);
-  counter_expression counter;
-  rule.add_expression(&icmp_payload);
-  rule.add_expression(&icmp_cmp);
-  rule.add_expression(&counter);
-  rule.add_expression(&reject);
+  // payload_expression icmp_payload(NFT_PAYLOAD_NETWORK_HEADER, NFT_REG_2, offsetof(iphdr, protocol), sizeof(uint8_t));
+  // uint32_t proto = IPPROTO_ICMP;
+  // comparison_expression icmp_cmp(NFT_REG_2, NFT_CMP_EQ, &proto, sizeof(uint8_t));
+  // reject_expression reject(NFT_REJECT_ICMP_UNREACH, 0);
+  // counter_expression counter;
+  // rule.add_expression(&icmp_payload);
+  // rule.add_expression(&icmp_cmp);
+  // rule.add_expression(&counter);
+  // rule.add_expression(&reject);
+  meta_expression mexpr(NFT_META_IIFTYPE, NFT_REG_1);
+  uint32_t daddr = offsetof(ethhdr, h_dest);
+  uint32_t mproto = IPPROTO_ETHERNET;
+  comparison_expression mcmp(NFT_REG_1, NFT_CMP_EQ, &mproto, sizeof(mproto));
+  meta_expression meta_expr(NFT_META_IIFNAME, NFT_REG_3);
+  const char* iifname = "enp3s0";
+  comparison_expression meta_cmp(NFT_REG_3, NFT_CMP_EQ, iifname, strlen(iifname));
+  rule.add_expression(&mexpr);
+  rule.add_expression(&mcmp);
+  rule.add_expression(&meta_expr);
+  rule.add_expression(&meta_cmp);
   rule.build_nlmsg_payload(nlh);
 
   mnl_nlmsg_batch_next(batch);
