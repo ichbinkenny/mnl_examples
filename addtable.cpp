@@ -57,7 +57,7 @@ int main()
     uint32_t port, seq, table_seq;
     mnl_nlmsg_batch* batch;
     int ret;
-    const char* table_name = "successtb";
+    const char* table_name = "filter";
 
     seq = time(nullptr);
     batch = mnl_nlmsg_batch_start(buf, sizeof(buf));

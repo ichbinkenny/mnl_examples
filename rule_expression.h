@@ -26,12 +26,11 @@ enum rule_fields
 class rule_expression
 {
 	public:
-		rule_expression(){};
-		virtual ~rule_expression();
-		virtual void build(nlmsghdr* nlh);
-		virtual void parse(nlattr* attr);
-		virtual bool same_as(const rule_expression& other);		
-		virtual const char* get_name();
+		virtual ~rule_expression() = 0;
+		virtual void build(nlmsghdr* nlh) = 0;
+		virtual void parse(nlattr* attr) = 0;
+		virtual bool same_as(const rule_expression& other) = 0;		
+		virtual const char* get_name() = 0;
 
 	protected:
 		std::string name;

@@ -24,10 +24,10 @@ class comparison_expression : public rule_expression
 		comparison_expression();
 		comparison_expression(nft_registers reg, nft_cmp_ops operation, const void* p_data, uint32_t data_length);
 		~comparison_expression();
-		void build(nlmsghdr* nlh);
-		void parse(nlattr* attr);
-		bool same_as(const comparison_expression& other);
-		const char* get_name();
+		void build(nlmsghdr* nlh) override;
+		void parse(nlattr* attr) override;
+		bool same_as(const rule_expression& other);
+		const char* get_name() override;
 	private:
 		data_register data;
 		nft_cmp_ops operation;

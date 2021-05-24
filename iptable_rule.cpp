@@ -9,6 +9,7 @@
 iptable_rule::iptable_rule()
 {
 	(void) memset((void*)this, 0, sizeof(*this));
+	this->expression_list.clear();
 }
 
 iptable_rule::~iptable_rule()
@@ -47,7 +48,7 @@ void iptable_rule::set_data(uint16_t attribute, void* data, uint32_t data_length
 	}
 }
 
-void iptable_rule::add_expression(rule_expression& expr)
+void iptable_rule::add_expression(rule_expression* expr)
 { 
   this->expression_list.push_back(expr);
 }
@@ -87,7 +88,7 @@ void iptable_rule::build_nlmsg_payload(nlmsghdr* nlh)
   {
     //mnl_attr_put_strz(nlh, NFTA_RULE_CHAIN, this->chain.c_str());
     iptable_helpers::put(nlh, NFTA_RULE_CHAIN, strlen(this->chain.c_str()) + 1, this->chain.c_str());
-	}
+  }
  //  if (!this->position != 0)
  //  {
  //    put(nlh, NFTA_RULE_POSITION, sizeof(uint64_t), reinterpret_cast<void*>(&htobe64(this->position)));
@@ -101,13 +102,12 @@ void iptable_rule::build_nlmsg_payload(nlmsghdr* nlh)
     nest = begin_nest(nlh, NFTA_RULE_EXPRESSIONS);
     for( uint8_t i = 0; i <  this->expression_list.size(); ++i)
     {
-      nested_nest = begin_nest(nlh, NFTA_LIST_ELEM);
-      iptable_helpers::put(nlh, NFTA_EXPR_NAME, strlen(expression_list[i].get_name()), expression_list[i].get_name());
-      double_nested_nest = begin_nest(nlh, NFTA_EXPR_DATA);
-      expression_list[i].build(nlh);
-      end_nest(nlh, double_nested_nest);
-      expression_list[i].build(nlh);
-      end_nest(nlh, nested_nest);
+    	nlattr* nest2 = iptable_helpers::begin_nest(nlh, NFTA_LIST_ELEM);
+      iptable_helpers::put(nlh, NFTA_EXPR_NAME, strlen(expression_list.at(i)->get_name()), expression_list.at(i)->get_name());
+      double_nested_nest = iptable_helpers::begin_nest(nlh, NFTA_EXPR_DATA);
+		  expression_list[i]->build(nlh);
+      iptable_helpers::end_nest(nlh, double_nested_nest);
+		  iptable_helpers::end_nest(nlh, nest2);
     }
     end_nest(nlh, nest);
   }
@@ -135,4 +135,9 @@ nlattr* iptable_rule::begin_nest(nlmsghdr* nlh, uint16_t flag)
 void iptable_rule::end_nest(nlmsghdr* nlh, nlattr* nest)
 {
 	nest->nla_len = get_message_payload_ending(nlh) - reinterpret_cast<char*>(nest);
+}
+
+void iptable_rule::build_expr(rule_expression* expr, nlmsghdr* nlh)
+{
+
 }

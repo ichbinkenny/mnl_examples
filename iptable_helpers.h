@@ -11,6 +11,8 @@ class iptable_helpers
 		static char* get_message_payload_ending(nlmsghdr* nlh);
 		static char* get_attribute_payload(nlattr* attr);
 		static void put(nlmsghdr* nlh, uint16_t type, size_t length, const void* data);
+		static nlattr* begin_nest(nlmsghdr* nlh, uint16_t flag);
+		static void end_nest(nlmsghdr* nlh, nlattr* nest);
 	private:
 
 };

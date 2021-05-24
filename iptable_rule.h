@@ -60,7 +60,7 @@ public:
 	void test();
 	char* get_message_payload_ending(nlmsghdr* nlh);
 	void build_nlmsg_payload(nlmsghdr* nlh);
-	void add_expression(rule_expression& expr);
+	void add_expression(rule_expression* expr);
 
 private:
 
@@ -79,12 +79,13 @@ private:
 		uint32_t protocol;
 	} compatability;
 
-	std::vector<rule_expression> expression_list;
+	std::vector<rule_expression*> expression_list;
 
 	nlattr* begin_nest(nlmsghdr* nlh, uint16_t flag);
 	void end_nest(nlmsghdr* nlh, nlattr* nest);
 	void package_expression(nlmsghdr* nlh, rule_expression& re);
 	void create_expression_payload(nlmsghdr* nlh, rule_expression& expr);
+	void build_expr(rule_expression* expr, nlmsghdr* nlh);
 };
 
 

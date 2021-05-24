@@ -15,7 +15,7 @@ class counter_expression : public rule_expression
 		~counter_expression();
 		void build(nlmsghdr* p_nlh) override;
 		void parse(nlattr* p_attr) override;
-		bool same_as(const counter_expression& other);
+		bool same_as(const rule_expression& other) override;
 		const char* get_name() override;
 	protected:
 	private:

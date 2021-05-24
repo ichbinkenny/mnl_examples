@@ -14,14 +14,15 @@ class payload_expression :  public rule_expression
 		base(base),
 		dest(dest),
 		offset(offset),
-		length(length){ payload_expression();};
+		length(length){ flags = (1 << NFTA_PAYLOAD_BASE) | (1 << NFTA_PAYLOAD_DREG) | (1 << NFTA_PAYLOAD_OFFSET) | (1 << NFTA_PAYLOAD_LEN); length = 0; name = "payload";};
 		~payload_expression();
-		void build(nlmsghdr* p_nlh) override;
-		void parse(nlattr* p_attr) override;
-		bool same_as(const payload_expression& other);
-		const char* get_name() override;
+		void build(nlmsghdr* p_nlh) ;
+		void parse(nlattr* p_attr) ;
+		bool same_as(const rule_expression& other);
+		const char* get_name() ;
 		void set_flags(uint32_t flags);
 		void add_flags(uint32_t flags);
+		void set_data(uint16_t type, const char* data, uint32_t length);
 	private:
 		nft_registers source;
 		nft_registers dest;

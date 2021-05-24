@@ -1,5 +1,6 @@
 #include <vector>
 #include <arpa/inet.h>
+#include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <libmnl/libmnl.h>
 #include <linux/netlink.h>
@@ -14,6 +15,7 @@
 #include "rule_expressions/meta_expression.h"
 #include "rule_expressions/payload_expression.h"
 #include "rule_expressions/comparison_expression.h"
+#include "rule_expressions/reject_expression.h"
 #include <cstring>
 
 const int expr_name = 0;
@@ -173,31 +175,20 @@ int main()
   rule_seq = seq;
   nlmsghdr* nlh = make_header(reinterpret_cast<char*>(mnl_nlmsg_batch_current(batch)), NFT_MSG_NEWRULE, 
       NFPROTO_IPV4, NLM_F_CREATE | NLM_F_ACK | NLM_F_APPEND, seq++);
-  // rule_expression r;
-  // (void) memset(&r, 0, sizeof(r));
-  // r.table_name = "filter";
-  // r.chain_name = "alpaca";
-  // r.family = NFPROTO_IPV4;
-  // rule_operation expr;
-  // (void) memset(&expr, 0, sizeof(expr));
-  // expr.name = "counter";
-  // r.expression_list.push_back(expr);
-  // expr.name = "log";
-  // r.expression_list.push_back(expr);
-  //create_rule_payload(nlh, &r);
-  std::vector<uint8_t> data;
-  counter_expression cexpr;
-  log_expression lexpr;
-  meta_expression mexpr;
-  payload_expression payload(NFT_PAYLOAD_TRANSPORT_HEADER, NFT_REG_1, offsetof(tcphdr, dest), sizeof(uint8_t));
-  payload.add_flags((1 << NFTA_PAYLOAD_DREG) | (1 << NFTA_PAYLOAD_BASE) | (1 << NFTA_PAYLOAD_OFFSET) | (1 << NFTA_PAYLOAD_LEN));
-  uint16_t port = htons(23);
-  comparison_expression cmp(NFT_REG_1, NFT_CMP_EQ, reinterpret_cast<const void*>(&port), sizeof(uint8_t));
-  //rule.add_expression(mexpr);
-  //rule.add_expression(payload);
-  //rule.add_expression(cmp);
-  rule.add_expression(cexpr);
-  rule.add_expression(lexpr);
+  // payload_expression payload(NFT_PAYLOAD_NETWORK_HEADER, NFT_REG_1, offsetof(iphdr, protocol), sizeof(uint8_t));
+  // rule.add_expression(&payload);
+  // uint32_t proto = IPPROTO_ICMP;
+  // comparison_expression cmp(NFT_REG_1, NFT_CMP_EQ, &proto, sizeof(uint8_t));
+  // rule.add_expression(&cmp);
+  payload_expression icmp_payload(NFT_PAYLOAD_NETWORK_HEADER, NFT_REG_2, offsetof(iphdr, protocol), sizeof(uint8_t));
+  uint32_t proto = IPPROTO_ICMP;
+  comparison_expression icmp_cmp(NFT_REG_2, NFT_CMP_EQ, &proto, sizeof(uint8_t));
+  reject_expression reject(NFT_REJECT_ICMP_UNREACH, 0);
+  counter_expression counter;
+  rule.add_expression(&icmp_payload);
+  rule.add_expression(&icmp_cmp);
+  rule.add_expression(&counter);
+  rule.add_expression(&reject);
   rule.build_nlmsg_payload(nlh);
 
   mnl_nlmsg_batch_next(batch);

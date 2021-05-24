@@ -29,7 +29,8 @@ char* iptable_helpers::get_message_payload_ending(nlmsghdr* nlh)
 
 char* iptable_helpers::get_attribute_payload(nlattr* attr)
 {
-	return reinterpret_cast<char*>(reinterpret_cast<char*>(attr) + NLMSG_ALIGN(sizeof(nlattr)));
+  char* result = reinterpret_cast<char*>(reinterpret_cast<char*>(attr) + NLMSG_ALIGN(sizeof(nlattr)));
+	return result;
 }
 
 void iptable_helpers::put(nlmsghdr* nlh, uint16_t type, size_t length, const void* data)
@@ -48,4 +49,17 @@ void iptable_helpers::put(nlmsghdr* nlh, uint16_t type, size_t length, const voi
     (void) memset(get_attribute_payload(attr) + length, 0, align);
   }
   nlh->nlmsg_len += NLMSG_ALIGN(payload_size);
+}
+
+nlattr* iptable_helpers::begin_nest(nlmsghdr* nlh, uint16_t flag)
+{
+  nlattr* entry = reinterpret_cast<nlattr*>(get_message_payload_ending(nlh));
+  entry->nla_type = NLA_F_NESTED | flag;
+  nlh->nlmsg_len += NLMSG_ALIGN(sizeof(nlattr));
+  return entry;
+}
+
+void iptable_helpers::end_nest(nlmsghdr* nlh, nlattr* nest)
+{
+  nest->nla_len = get_message_payload_ending(nlh) - reinterpret_cast<char*>(nest);
 }
