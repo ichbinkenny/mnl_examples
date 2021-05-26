@@ -49,3 +49,8 @@ const char* counter_expression::get_name()
 {
 	return this->name.c_str();
 }
+
+static int get_info(char* buf, size_t size, int type)
+{
+	return snprintf(buf, size, "TEST!!!!");
+}

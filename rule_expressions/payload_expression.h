@@ -2,7 +2,6 @@
 #define __PAYLOAD_EXPRESSION_H__
 
 #include "../rule_expression.h"
-#include "log_expression.h"
 #include <cstdint>
 #include <linux/netfilter/nf_tables.h>
 

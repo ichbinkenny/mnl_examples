@@ -7,6 +7,7 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/if_ether.h>
+#include <linux/if_vlan.h>
 #include <libmnl/libmnl.h>
 #include <linux/netlink.h>
 #include <linux/netfilter.h>
@@ -23,6 +24,7 @@
 #include "rule_expressions/comparison_expression.h"
 #include "rule_expressions/reject_expression.h"
 #include "rule_expressions/match_expression.h"
+#include "rule_expressions/bitwise_expression.h"
 #include <cstring>
 
 const int expr_name = 0;
@@ -130,23 +132,53 @@ int main()
   // rule.add_expression(&mac_cmp);
 
   //Layer 2 match on dest
-  meta_expression eth_meta(NFT_META_IIFTYPE, NFT_REG_1);
-  uint32_t ether = 0x01;
-  comparison_expression eth_cmp(NFT_REG_1, NFT_CMP_EQ, &ether, sizeof(ether));
-  payload_expression eth_payload(NFT_PAYLOAD_LL_HEADER, NFT_REG_1, offsetof(ethhdr, h_dest), sizeof(ether_addr));
-  ether_addr* daddr = ether_aton("d4:d2:52:8d:97:d5");
-  comparison_expression mac_cmp(NFT_REG_1, NFT_CMP_EQ, daddr, sizeof(ether_addr));
-  payload_expression src_payload(NFT_PAYLOAD_LL_HEADER, NFT_REG_2, offsetof(ethhdr, h_source), sizeof(ether_addr));
-  ether_addr* saddr = ether_aton("d4:d2:52:8d:97:d5");
-  comparison_expression src_mac_cmp(NFT_REG_2, NFT_CMP_EQ, saddr, sizeof(ether_addr));
+  // meta_expression eth_meta(NFT_META_IIFTYPE, NFT_REG_1);
+  // uint32_t ether = 0x01;
+  // comparison_expression eth_cmp(NFT_REG_1, NFT_CMP_EQ, &ether, sizeof(ether));
+  // payload_expression eth_payload(NFT_PAYLOAD_LL_HEADER, NFT_REG_1, offsetof(ethhdr, h_dest), sizeof(ether_addr));
+  // ether_addr* daddr = ether_aton("d4:d2:52:8d:97:d5");
+  // comparison_expression mac_cmp(NFT_REG_1, NFT_CMP_EQ, daddr, sizeof(ether_addr));
+  // payload_expression src_payload(NFT_PAYLOAD_LL_HEADER, NFT_REG_2, offsetof(ethhdr, h_source), sizeof(ether_addr));
+  // ether_addr* saddr = ether_aton("d4:d2:52:8d:97:d5");
+  // comparison_expression src_mac_cmp(NFT_REG_2, NFT_CMP_EQ, saddr, sizeof(ether_addr));
+  // counter_expression counter;
+
+  // rule.add_expression(&eth_meta);
+  // rule.add_expression(&eth_cmp);
+  // rule.add_expression(&eth_payload);
+  // rule.add_expression(&mac_cmp);
+  // rule.add_expression(&src_payload);
+  // rule.add_expression(&src_mac_cmp);
+  // rule.add_expression(&counter);
+
+  // Begin Levi's ultimate rule tests
+  // Layer 2 VLAN ID
+  // meta_expression vlan_meta(NFT_META_IIFTYPE, NFT_REG_1);
+  // uint32_t ether_type = 0x01;
+  // comparison_expression ether_type_cmp(NFT_REG_1, NFT_CMP_EQ, &ether_type, sizeof(ether_type));
+  // payload_expression vlan_payload(NFT_PAYLOAD_LL_HEADER, NFT_REG_1, 0, sizeof(uint16_t));
+  // uint32_t mask = 0xff0f;
+  // uint32_t xor_val = 0;
+  // bitwise_expression vlan_bwise(NFT_REG_1, NFT_REG_1, sizeof(uint32_t), &mask, sizeof(mask), &xor_val, sizeof(xor_val));
+  // uint32_t data = 0;
+  // comparison_expression vlan_cmp(NFT_REG_1, NFT_CMP_NEQ, &data, sizeof(data));
+  // counter_expression counter;
+  // rule.add_expression(&vlan_meta);
+  // rule.add_expression(&ether_type_cmp);
+  // rule.add_expression(&vlan_payload);
+  // rule.add_expression(&vlan_bwise);
+  // rule.add_expression(&vlan_cmp);
+  // rule.add_expression(&counter);
+
+  //Layer 3 IPv4
+  payload_expression ipv4_payload(NFT_PAYLOAD_NETWORK_HEADER, NFT_REG_1, offsetof(iphdr, saddr), sizeof(uint32_t));
+  in_addr saddr;
+  inet_aton("8.8.8.8", &saddr);
+  comparison_expression ipv4_cmp(NFT_REG_1, NFT_CMP_EQ, &saddr, sizeof(in_addr));
   counter_expression counter;
 
-  rule.add_expression(&eth_meta);
-  rule.add_expression(&eth_cmp);
-  rule.add_expression(&eth_payload);
-  rule.add_expression(&mac_cmp);
-  rule.add_expression(&src_payload);
-  rule.add_expression(&src_mac_cmp);
+  rule.add_expression(&ipv4_payload);
+  rule.add_expression(&ipv4_cmp);
   rule.add_expression(&counter);
   rule.build_nlmsg_payload(nlh);
   mnl_nlmsg_batch_next(batch);

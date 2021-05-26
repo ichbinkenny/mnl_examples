@@ -4,19 +4,7 @@
 #include "../rule_expression.h"
 #include <cstdint>
 #include <linux/netfilter/nf_tables.h>
-
-union data_register
-{
-struct {
-	uint32_t value[NFT_DATA_VALUE_MAXLEN / sizeof(uint32_t)];
-	uint32_t length;
-};
-
-struct {
-	int verdict;
-	const char* chain;
-};
-};
+#include "data_register.h"
 
 class comparison_expression : public rule_expression
 {

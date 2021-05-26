@@ -17,6 +17,7 @@ class counter_expression : public rule_expression
 		void parse(nlattr* p_attr) override;
 		bool same_as(const rule_expression& other) override;
 		const char* get_name() override;
+		static int print_info(char* buf, size_t size, int type);
 	protected:
 	private:
 		uint64_t packet_count;
