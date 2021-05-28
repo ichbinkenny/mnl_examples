@@ -22,14 +22,14 @@ void counter_expression::build(nlmsghdr* p_nlh)
 	if(this->flags & (1 << NFTA_COUNTER_BYTES))
 	{
 		uint64_t data = htobe64(this->bytes_count);
-		mnl_attr_put_u64(p_nlh, NFTA_COUNTER_BYTES, data);
-		//iptable_helpers::netlink_message_put(p_nlh, NFTA_COUNTER_BYTES, sizeof(uint64_t), &data);
+		//mnl_attr_put_u64(p_nlh, NFTA_COUNTER_BYTES, data);
+		iptable_helpers::netlink_message_put(p_nlh, NFTA_COUNTER_BYTES, sizeof(uint64_t), &data);
 	}
 	if (this->flags & (1 << NFTA_COUNTER_PACKETS))
 	{
 		uint64_t data = htobe64(this->packet_count);
-		mnl_attr_put_u64(p_nlh, NFTA_COUNTER_PACKETS, data);
-		//iptable_helpers::netlink_message_put(p_nlh, NFTA_COUNTER_PACKETS, sizeof(uint64_t), &data);
+		//mnl_attr_put_u64(p_nlh, NFTA_COUNTER_PACKETS, data);
+		iptable_helpers::netlink_message_put(p_nlh, NFTA_COUNTER_PACKETS, sizeof(uint64_t), &data);
 	}
 }
 

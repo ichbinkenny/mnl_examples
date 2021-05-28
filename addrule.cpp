@@ -72,7 +72,7 @@ int main()
   rule.set_data(RULE_TABLE, reinterpret_cast<void*>(&table), sizeof(table));
   std::string chain = "alpaca";
   rule.set_data(RULE_CHAIN, reinterpret_cast<void*>(&chain), sizeof(chain));
-  uint32_t fam = NFPROTO_IPV4;
+  uint32_t fam = NFPROTO_NETDEV;
   rule.set_data(RULE_FAMILY, reinterpret_cast<void*>(&fam), sizeof(fam));
   mnl_socket* nl = mnl_socket_open(NETLINK_NETFILTER);
   uint32_t portno, seq, rule_seq;
