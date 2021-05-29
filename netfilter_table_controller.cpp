@@ -146,8 +146,8 @@ void netfilter_table_controller::add_table(const char* table_name)
 data_status netfilter_table_controller::add_table_cb(char* buf, size_t size, uint32_t sequence_num, int port_num)
 {
     nlmsghdr* nlh = reinterpret_cast<nlmsghdr*>(buf);
-    data_status status = nlmsg_valid(nlh, size) ? OK : ERR;
-    while (nlmsg_valid(nlh, size))
+    data_status status = iptable_helpers::nlmsg_valid(nlh, size) ? OK : ERR;
+    while (iptable_helpers::nlmsg_valid(nlh, size))
     {
         if ( port_num != nlh->nlmsg_pid )
         {
@@ -204,8 +204,8 @@ void netfilter_table_controller::get_tables()
 data_status netfilter_table_controller::get_table_data(char* buffer, size_t len, uint32_t seq, int portno, void* data_storage)
 {
     nlmsghdr* nlh = reinterpret_cast<nlmsghdr*>(buffer);
-    data_status status = nlmsg_valid(nlh, len) ? DONE : ERR;
-    while(nlmsg_valid(nlh, len))
+    data_status status = iptable_helpers::nlmsg_valid(nlh, len) ? DONE : ERR;
+    while(iptable_helpers::nlmsg_valid(nlh, len))
     {
         retrieve_attrs(nlh);
         len -= NLMSG_ALIGN(nlh->nlmsg_len);
@@ -221,21 +221,6 @@ void netfilter_table_controller::retrieve_attrs(nlmsghdr* nlh)
     nfgenmsg* gen = reinterpret_cast<nfgenmsg*>(nlh + NLMSG_HDRLEN);
 
 }
-
-// void netfilter_table_controller::emplace_attrs(nlmsghdr* nlh, int offset)
-// {
-//     nlattr* attr;
-//     for ( attr = reinterpret_cast<nlattr*>(nlh + NLMSG_HDRLEN + NLMSG_ALIGN(offset));
-//           attribute_valid(attr, nlh + NLMSG_ALIGN(nlh->nlmsg_len);)
-//         )
-// }
-
-// bool netfilter_table_controller::attribute_valid(nlattr* attr, char* pos)
-// {
-//     bool status = false;
-
-//     return status;
-// }
 
 
 nlmsghdr* netfilter_table_controller::create_header(char* buffer, uint16_t command, uint16_t family, uint16_t flags, uint32_t seq)
@@ -260,12 +245,4 @@ nlmsghdr* netfilter_table_controller::create_header(char* buffer, uint16_t comma
 
     return nlh;
 
-}
-
-bool netfilter_table_controller::nlmsg_valid(nlmsghdr* nlh, int len)
-{
-    bool match = len >= (int)sizeof(struct nlmsghdr) &&
-	       nlh->nlmsg_len >= sizeof(struct nlmsghdr) &&
-	       (int)nlh->nlmsg_len <= len;
-    return match;
 }

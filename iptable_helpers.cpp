@@ -151,3 +151,41 @@ char* iptable_helpers::put_aux_header(nlmsghdr* hdr, size_t size)
   (void) memset(mem_offset, 0 , NLMSG_ALIGN(size)); // prepare space for aux data
   return mem_offset;
 }
+
+bool iptable_helpers::nlmsg_valid(nlmsghdr* nlh, int len)
+{
+    bool match = len >= (int)sizeof(nlmsghdr) &&
+	       nlh->nlmsg_len >= sizeof(nlmsghdr) &&
+	       (int)nlh->nlmsg_len <= len;
+    return match;
+}
+
+nlmsghdr* iptable_helpers::next_nlmsg(nlmsghdr* nlh, size_t* len)
+{
+  *len -= NLMSG_ALIGN(nlh->nlmsg_len);
+  return reinterpret_cast<nlmsghdr*>(reinterpret_cast<char*>(nlh) + NLMSG_ALIGN(nlh->nlmsg_len));
+}
+
+nlattr* iptable_helpers::next_nlattr(nlattr* attr)
+{
+  nlattr* next = attr + NLMSG_ALIGN(attr->nla_len);
+  return next;
+}
+
+char* iptable_helpers::get_payload_from_offset(nlmsghdr* nlh, size_t offset)
+{
+  return reinterpret_cast<char*>(nlh) + NLMSG_HDRLEN + NLMSG_ALIGN(offset);
+}
+
+bool iptable_helpers::is_attribute_valid(nlattr* attr, int length)
+{
+  return length >= (int)sizeof(nlattr) &&
+	       attr->nla_len >= sizeof(nlattr) &&
+	       (int)attr->nla_len <= length;
+}
+
+char* iptable_helpers::get_nlmsg_payload(nlmsghdr* nlh)
+{
+  char* ptr = reinterpret_cast<char*>(nlh) + NLMSG_HDRLEN;
+  return ptr; 
+}

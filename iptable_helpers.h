@@ -30,7 +30,14 @@ class iptable_helpers
 		static nlmsghdr* create_nfnl_subsys_header(char* buf, uint16_t command, uint16_t protocol, uint16_t flags, uint32_t seq);
 		static nlmsghdr* put_header(char* buf);
 		static char* put_aux_header(nlmsghdr* nlh, size_t size);
+		static bool nlmsg_valid(nlmsghdr* nlh, int length);
+		static bool is_attribute_valid(nlattr* attr, int length);
+		static nlmsghdr* next_nlmsg(nlmsghdr* nlh, size_t* len);
+		static nlattr* next_nlattr(nlattr* attr);
+		static char* get_payload_from_offset(nlmsghdr* nlh, size_t offset);
+		static char* get_nlmsg_payload(nlmsghdr* nlh);
 	private:
+
 
 };
 

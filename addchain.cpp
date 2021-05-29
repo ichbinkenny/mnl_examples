@@ -27,7 +27,7 @@ int main()
 
   chain_seq = seq;
 
-  nlmsghdr* hdr = iptable_helpers::create_nfnl_subsys_header(batch->current_message, NFT_MSG_NEWCHAIN, NFPROTO_NETDEV, NLM_F_CREATE | NLM_F_ACK, seq++);
+  nlmsghdr* hdr = iptable_helpers::create_nfnl_subsys_header(batch->current_message, NFT_MSG_NEWCHAIN, NFPROTO_IPV4, NLM_F_CREATE | NLM_F_ACK, seq++);
   iptable_helpers::put(hdr, NFTA_CHAIN_TABLE, strlen("filter") + 1, "filter");
   iptable_helpers::put(hdr, NFTA_CHAIN_NAME, strlen("input") + 1, "input");
   nlattr* nest = iptable_helpers::begin_nest(hdr, NFTA_CHAIN_HOOK);

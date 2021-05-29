@@ -8,7 +8,6 @@
 #include <netinet/tcp.h>
 #include <netinet/if_ether.h>
 #include <linux/if_vlan.h>
-#include <libmnl/libmnl.h>
 #include <linux/netlink.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter/nfnetlink.h>
@@ -17,6 +16,8 @@
 #include <iostream>
 #include <unistd.h>
 #include "iptable_rule.h"
+#include "iptable_helpers.h"
+#include "netfilter_table_controller.h"
 #include "rule_expressions/counter_expression.h"
 #include "rule_expressions/log_expression.h"
 #include "rule_expressions/meta_expression.h"
@@ -30,61 +31,30 @@
 const int expr_name = 0;
 const int expr_base = 1;
 
-void make_batch_header(char* buf, uint16_t type, uint32_t seq)
+int rule_cb(char* buf, size_t len, uint32_t seq, int port)
 {
-    nlmsghdr* hdr;
-    nfgenmsg* msg;
-
-    hdr = mnl_nlmsg_put_header(buf);
-    hdr->nlmsg_flags = NLM_F_REQUEST;
-    hdr->nlmsg_seq = seq;
-    hdr->nlmsg_type = type;
-
-    msg = reinterpret_cast<nfgenmsg*>(mnl_nlmsg_put_extra_header(hdr, sizeof(*msg)));
-    msg->nfgen_family = AF_UNSPEC;
-    msg->res_id = NFNL_SUBSYS_NFTABLES;
-    msg->version = NFNETLINK_V0;
+  return DONE;
 }
-
-struct nlmsghdr* make_header(char* buf, uint16_t cmd, uint16_t fam, uint16_t type, uint32_t seq)
-{
-    nlmsghdr* hdr;
-    nfgenmsg* msg;
-
-    hdr = mnl_nlmsg_put_header(buf);
-    hdr->nlmsg_flags = NLM_F_REQUEST | type;
-    hdr->nlmsg_seq = seq;
-    hdr->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | cmd;
-
-    msg = reinterpret_cast<nfgenmsg*>(mnl_nlmsg_put_extra_header(hdr, sizeof(*msg)));
-    msg->nfgen_family = fam;
-    msg->version = NFNETLINK_V0;
-    msg->res_id = 0;
-
-    return hdr;
-}
-
 
 int main()
 {
   iptable_rule rule;
   std::string table = "filter";
   rule.set_data(RULE_TABLE, reinterpret_cast<void*>(&table), sizeof(table));
-  std::string chain = "alpaca";
+  std::string chain = "input";
   rule.set_data(RULE_CHAIN, reinterpret_cast<void*>(&chain), sizeof(chain));
-  uint32_t fam = NFPROTO_NETDEV;
+  uint32_t fam = NFPROTO_IPV4;
   rule.set_data(RULE_FAMILY, reinterpret_cast<void*>(&fam), sizeof(fam));
-  mnl_socket* nl = mnl_socket_open(NETLINK_NETFILTER);
   uint32_t portno, seq, rule_seq;
-  char buf[MNL_SOCKET_BUFFER_SIZE];
-  mnl_nlmsg_batch* batch;
+  char buf[8192];
+  message_batch* batch;
   seq = time(nullptr);
-  batch = mnl_nlmsg_batch_start(buf, sizeof(buf));
-  make_batch_header(reinterpret_cast<char*>(mnl_nlmsg_batch_current(batch)), NFNL_MSG_BATCH_BEGIN, seq++);
-  mnl_nlmsg_batch_next(batch);
+  batch = iptable_helpers::start_batch(buf, sizeof(buf));
+  iptable_helpers::create_batch_header(batch->current_message, NFNL_MSG_BATCH_BEGIN, seq++);
+  iptable_helpers::batch_create_next_message(batch);
 
   rule_seq = seq;
-  nlmsghdr* nlh = make_header(reinterpret_cast<char*>(mnl_nlmsg_batch_current(batch)), NFT_MSG_NEWRULE, 
+  nlmsghdr* nlh = iptable_helpers::create_nfnl_subsys_header(batch->current_message, NFT_MSG_NEWRULE, 
       NFPROTO_IPV4, NLM_F_CREATE | NLM_F_ACK | NLM_F_APPEND, seq++);
   // payload_expression payload(NFT_PAYLOAD_NETWORK_HEADER, NFT_REG_1, offsetof(iphdr, protocol), sizeof(uint8_t));
   // rule.add_expression(&payload);
@@ -181,39 +151,41 @@ int main()
   rule.add_expression(&ipv4_cmp);
   rule.add_expression(&counter);
   rule.build_nlmsg_payload(nlh);
-  mnl_nlmsg_batch_next(batch);
-  make_batch_header(reinterpret_cast<char*>(mnl_nlmsg_batch_current(batch)), NFNL_MSG_BATCH_END, seq++);
-  mnl_nlmsg_batch_next(batch);
+  iptable_helpers::batch_create_next_message(batch);
+  iptable_helpers::create_batch_header(batch->current_message, NFNL_MSG_BATCH_END, seq++);
+  iptable_helpers::batch_create_next_message(batch);
 
-  mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID);
+  netfilter_table_controller controller;
 
-  portno = mnl_socket_get_portid(nl);
+  controller.setup();
+
+  portno = controller.getport();
   
-  if(mnl_socket_sendto(nl, mnl_nlmsg_batch_head(batch), mnl_nlmsg_batch_size(batch)) < 0)
+  if(controller.send(batch->data_buf, batch->size) < 0)
   {
     std::cerr << "Failed to send msg" << std::endl;
     return -1;
   }
 
-  int resp = mnl_socket_recvfrom(nl, buf, sizeof(buf));
+  int resp = controller.recv(buf, sizeof(buf));
   if (resp < 0)
   {
     std::cerr << "Failed to get msg" << std::endl;
   }
   while (resp > 0)
   {
-    resp = mnl_cb_run(buf, resp, rule_seq, portno, nullptr, nullptr);
+    resp = rule_cb(buf, resp, rule_seq, portno);
     if (resp <= 0)
     {
       break;
     }
-    resp = mnl_socket_recvfrom(nl, buf, sizeof(buf));
+    resp = controller.recv(buf, sizeof(buf));
   }
   if(resp == -1)
   {
     std::cerr << "Error: " << strerror(errno) << std::endl;
   }
 
-  mnl_socket_close(nl);
+  controller.cleanup();
 
 }

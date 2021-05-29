@@ -35,8 +35,6 @@ class netfilter_table_controller
         sockaddr_nl addr;
         nlmsghdr* create_header(char* buffer, uint16_t command, uint16_t family, uint16_t flags, uint32_t seq);
         data_status get_table_data(char* buffer, size_t len, uint32_t seq, int portno, void* data_storage);
-        
-        bool nlmsg_valid(nlmsghdr* nlh, int length);
         void retrieve_attrs(nlmsghdr* nlh);
         nfgenmsg* retrieve_payload(nlmsghdr* nlh);
     protected:

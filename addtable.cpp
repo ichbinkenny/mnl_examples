@@ -1,126 +1,64 @@
+#include <netinet/in.h>
+#include "netfilter_table_controller.h"
 #include <iostream>
-#include <arpa/inet.h>
-#include <linux/socket.h>
-#include <linux/netlink.h>
-#include <linux/netfilter.h>
+#include <sys/socket.h>
+#include "iptable_helpers.h"
 #include <linux/netfilter/nfnetlink.h>
-#include <linux/netfilter/nf_tables.h>
-#include <unistd.h>
 #include <string.h>
-#include <libmnl/libmnl.h>
-
-void make_batch_header(char* buf, uint16_t type, uint32_t seq)
-{
-    nlmsghdr* hdr;
-    nfgenmsg* msg;
-
-    hdr = mnl_nlmsg_put_header(buf);
-    hdr->nlmsg_flags = NLM_F_REQUEST;
-    hdr->nlmsg_seq = seq;
-    hdr->nlmsg_type = type;
-
-    msg = reinterpret_cast<nfgenmsg*>(mnl_nlmsg_put_extra_header(hdr, sizeof(*msg)));
-    msg->nfgen_family = AF_UNSPEC;
-    msg->res_id = NFNL_SUBSYS_NFTABLES;
-    msg->version = NFNETLINK_V0;
-}
-
-struct nlmsghdr* make_table_header(char* buf, uint16_t cmd, uint16_t fam, uint16_t type, uint32_t seq)
-{
-    nlmsghdr* hdr;
-    nfgenmsg* msg;
-
-    hdr = mnl_nlmsg_put_header(buf);
-    hdr->nlmsg_flags = NLM_F_REQUEST | type;
-    hdr->nlmsg_seq = seq;
-    hdr->nlmsg_type = (NFNL_SUBSYS_NFTABLES << 8) | cmd;
-
-    msg = reinterpret_cast<nfgenmsg*>(mnl_nlmsg_put_extra_header(hdr, sizeof(*msg)));
-    msg->nfgen_family = fam;
-    msg->version = NFNETLINK_V0;
-    msg->res_id = 0;
-
-    return hdr;
-}
-
-void make_table_payload(nlmsghdr* hdr, const char* name, uint32_t flags)
-{
-    mnl_attr_put_strz(hdr, NFTA_TABLE_NAME, name);
-    mnl_attr_put_u32(hdr, NFTA_TABLE_FLAGS, flags);
-}
 
 int main()
 {
-    mnl_socket* nl;
-    char buf[MNL_SOCKET_BUFFER_SIZE];
-    struct nlmsghdr* nlh;
-    uint32_t port, seq, table_seq;
-    mnl_nlmsg_batch* batch;
-    int ret;
-    const char* table_name = "filter";
 
-    seq = time(nullptr);
-    batch = mnl_nlmsg_batch_start(buf, sizeof(buf));
-    make_batch_header(reinterpret_cast<char*>(mnl_nlmsg_batch_current(batch)), NFNL_MSG_BATCH_BEGIN, seq++);
+  const char* table_name = "filter";
+  uint32_t flags = htonl(0);
 
-    mnl_nlmsg_batch_next(batch);
+  char buf[8192];
+  netfilter_table_controller controller;
+  sockaddr_nl addr;
+  if(!controller.setup())
+  {
+    std::cerr << "failed to bind" << std::endl;
+    return -1;
+  }
 
-    table_seq = seq;
-    nlh = make_table_header(reinterpret_cast<char*>(mnl_nlmsg_batch_current(batch)), NFT_MSG_NEWTABLE, NFPROTO_INET, NLM_F_ACK | NLM_F_CREATE, seq++);
-    make_table_payload(nlh, table_name, 0);
+  uint32_t seq = time(nullptr), port, table_seq;
 
-    mnl_nlmsg_batch_next(batch);
-     
-    make_batch_header(reinterpret_cast<char*>(mnl_nlmsg_batch_current(batch)), NFNL_MSG_BATCH_END, seq++);
-    mnl_nlmsg_batch_next(batch);
+  message_batch* batch = iptable_helpers::start_batch(buf, sizeof(buf));
+  iptable_helpers::create_batch_header(batch->current_message,  NFNL_MSG_BATCH_BEGIN, seq++);
+  iptable_helpers::batch_create_next_message(batch);
 
-    // begin sending message
-    nl = mnl_socket_open(NETLINK_NETFILTER);
-    if(nl == nullptr)
+  table_seq = seq;
+  nlmsghdr* nlh = iptable_helpers::create_nfnl_subsys_header(batch->current_message, NFT_MSG_NEWTABLE, NFPROTO_IPV4, NLM_F_ACK | NLM_F_CREATE, seq++);
+  iptable_helpers::put(nlh, NFTA_TABLE_NAME, strlen(table_name) + 1 , table_name);
+  iptable_helpers::put(nlh, NFTA_TABLE_FLAGS, sizeof(uint32_t), &flags);
+  iptable_helpers::batch_create_next_message(batch);
+
+  iptable_helpers::create_batch_header(batch->current_message, NFNL_MSG_BATCH_END, seq++);
+  iptable_helpers::batch_create_next_message(batch);
+
+  controller.setup();
+
+  if (controller.send(batch->data_buf, batch->size) >= 0)
+  {
+    //iptable_helpers::end_batch(batch); // free the batch resource
+    port = controller.getport();
+    int recvd = controller.recv(buf, sizeof(buf));
+    if ( recvd > -1 )
     {
-        std::cerr << "Failed to open socket" << std::endl;
-        return -1;
-    }
-    if(mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0)
-    {
-        std::cerr << "Failed to bind" << std::endl;
-        mnl_socket_close(nl);
-        return -2;
-    }
-    port = mnl_socket_get_portid(nl);
-
-    // Send message
-    if(mnl_socket_sendto(nl, mnl_nlmsg_batch_head(batch), mnl_nlmsg_batch_size(batch)) < 0)
-    {
-        std::cerr << "Failed to send message" << std::endl;
-        mnl_socket_close(nl);
-        return -3;
-    }
-    mnl_nlmsg_batch_stop(batch);
-
-    ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
-
-    if(ret < 0)
-    {
-        std::cerr << "Failed to receive message: " << strerror(errno) << std::endl;
-    }
-
-    while (ret > 0) 
-    {
-        ret = mnl_cb_run(buf, ret, table_seq, port, NULL, NULL);
-        std::cout << "Ret: " << ret << std::endl;
-        if (ret <= 0)
+      std::cout << "First recv works!" << std::endl;
+      while ( recvd > 0 )
+      {
+        recvd = controller.add_table_cb(buf, recvd, table_seq, port);
+        if (recvd <= 0)
         {
-            break;
+          break;
         }
-        ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
-        std::cout << "HERE" << std::endl;
+        recvd = controller.recv(buf, sizeof(buf));
+      }
     }
-    if (ret == -1)
-    {
-        std::cerr << "Recv err: " << strerror(errno) << std::endl;
-    }
-    mnl_socket_close(nl);
-    return 0;
-    
+  }
+
+
+  controller.cleanup();
+  return 0;
 }

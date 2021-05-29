@@ -1,6 +1,5 @@
 #include "iptable_rule.h"
 #include "iptable_helpers.h"
-#include <libmnl/libmnl.h>
 #include <iostream>
 #include <unistd.h>
 #include <string>
@@ -77,16 +76,13 @@ void iptable_rule::build_nlmsg_payload(nlmsghdr* nlh)
   if (this->family != 0)
   {
     iptable_helpers::put(nlh, NFTA_RULE_UNSPEC, sizeof(uint32_t), &this->family);
-    //mnl_attr_put_u32(nlh, NFTA_RULE_UNSPEC, this->family);
 	}
   if (!this->table.empty())
   {
     iptable_helpers::put(nlh, NFTA_RULE_TABLE, strlen(this->table.c_str()) + 1, this->table.c_str()); // +1 is to include null terminator
-    //mnl_attr_put_strz(nlh, NFTA_RULE_TABLE, this->table.c_str());
 	}
   if (!this->chain.empty())
   {
-    //mnl_attr_put_strz(nlh, NFTA_RULE_CHAIN, this->chain.c_str());
     iptable_helpers::put(nlh, NFTA_RULE_CHAIN, strlen(this->chain.c_str()) + 1, this->chain.c_str());
   }
  //  if (!this->position != 0)
@@ -117,11 +113,6 @@ void iptable_rule::package_expression(nlmsghdr* nlh, rule_expression& expr)
 {
   const char* name = expr.get_name();
   iptable_helpers::put(nlh, NFTA_EXPR_NAME, strlen(name), name);
-
-  // if (strcmp(expr.name, "bitwise") == 0)
-  // {
-  //   if (expr.flags & (1 << BITWISE_SOURCE_REG))
-  // }
 }
 
 nlattr* iptable_rule::begin_nest(nlmsghdr* nlh, uint16_t flag)
